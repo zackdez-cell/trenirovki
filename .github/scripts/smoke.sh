@@ -26,7 +26,7 @@ x=open(f,encoding='utf-8').read()
 for m in re.finditer(r'<node [^>]*>',x):
     n=m.group(0)
     tx=re.search(r' text="([^"]*)"',n); cd=re.search(r'content-desc="([^"]*)"',n)
-    if (tx and tx.group(1)==t) or (cd and cd.group(1)==t):
+    if (tx and tx.group(1).lower()==t.lower()) or (cd and cd.group(1).lower()==t.lower()):
         b=re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',n)
         x1,y1,x2,y2=map(int,b.groups()); print((x1+x2)//2,(y1+y2)//2); break
 PY
