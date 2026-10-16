@@ -79,11 +79,43 @@ class MainActivity : Activity() {
         ) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         }
+        App.takeCrash(this)?.let { showCrash(it) }
+        if (savedInstanceState == null) handleShare(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleShare(intent)
+    }
+
+    /** План, присланный через «Поделиться» из чата. */
+    private fun handleShare(i: Intent?) {
+        if (i?.action != Intent.ACTION_SEND) return
+        val text = i.getStringExtra(Intent.EXTRA_TEXT)
+        if (!text.isNullOrBlank()) root.post { showImport(text) }
+    }
+
+    private fun showCrash(text: String) {
+        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+            .setTitle("В прошлый раз приложение упало")
+            .setMessage("Скопируйте текст ошибки и пришлите его в чат — так проще найти причину.\n\n" + text.take(1500))
+            .setPositiveButton("Копировать") { _, _ ->
+                getSystemService(ClipboardManager::class.java)
+                    ?.setPrimaryClip(android.content.ClipData.newPlainText("ошибка", text))
+                toast("Скопировано")
+            }
+            .setNegativeButton("Закрыть", null)
+            .show()
     }
 
     override fun onResume() {
         super.onResume()
-        AlarmScheduler.scheduleAll(this)
+        try {
+            AlarmScheduler.scheduleAll(this)
+        } catch (e: Exception) {
+            android.util.Log.e("WeekPlan", "scheduleAll failed", e)
+        }
         handler.removeCallbacks(tick)
         handler.post(tick)
     }
@@ -552,9 +584,9 @@ class MainActivity : Activity() {
 
     // ---------- Вставка плана ----------
 
-    private fun showImport() {
+    private fun showImport(prefill: String? = null) {
         val edit = EditText(this).apply {
-            setText(Storage.rawPlan(this@MainActivity))
+            setText(prefill ?: Storage.rawPlan(this@MainActivity))
             hint = "Понедельник\n10:00 10 отжиманий\n10:30 30 пресс\n\nВторник\n..."
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             minLines = 10
