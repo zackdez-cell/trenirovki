@@ -5,6 +5,9 @@ on:
     branches: [ci-test]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -41,8 +44,12 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           script: bash .github/scripts/smoke.sh
 
-      - uses: actions/upload-artifact@v4
+      - name: Сохранить результаты в ветку ci-results
         if: always()
-        with:
-          name: smoke-out
-          path: smoke-out
+        run: |
+          mkdir -p /tmp/res && cp -r smoke-out/. /tmp/res/ || true
+          cd /tmp/res
+          git init -q -b ci-results
+          git config user.name ci; git config user.email ci@example.com
+          git add -A; git commit -q -m "run ${{ github.run_number }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-results
